@@ -1,0 +1,67 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=2049
+
+Vim++ is a library to make object-oriented programming with Vim easy and natural. In Vim 7 were added some syntax constructions for object-oriented programming, but some tricky code should be written still, especially for inheritance and object constructors. So Vim++ defines a few commands to enable script writers avoid additional coding and make code more elegant. Vim++ use C++ like syntax for class definition. It defines commands Class, EndClass, Constr, Method, Abstract and Var. Usually class definitions looks as:
+
+Class MyClass : BaseClass1, BaseClass2, BaseClassN
+    Var member1 = 1
+    Constr New(arg1, arg2, arg3) : g:BaseClass1.New(a:arg1), g:BaseClass2.New(a:arg2), g:BaseClassN.New(a:arg1, a:arg2)
+        let self.member2 = a:arg3
+        return self
+    endfunction
+    Constr New1(arg1, arg2, argn) : {'member3': a:arg1}
+    endfunction
+    ........................
+    Method method1(arg1, arg2)
+        ....................
+    endf
+    Method method2(arg1, arg2)
+        ....................
+    endf
+EndClass
+
+So definition begins with Class classname, then optionally comma-separated list of base classes follows after colon. Then a few constructors, methods and members are defined(in any order). And EndClass command finishes class definition. The object is available in methods and constructors as self. Methods are like usual functions, just use another keyword Method. Constructors are like functions too, though there are a few differences. After usual function-like definitions a list of initializers may present after colon. Initializers usually are objects of base class constructed, but really any expression allowed which can be evaluated to dictionary. Constructor obtain variable 'self' which is already an object of proper type with all methods and members including inherited from base classes. Constructor should return variable 'self', though it can return something another if construction was not successful due to some reasons. Both constructors and methods must be finished with endfunction.
+
+Vim++ object is just a dictionary with a few members and few functions defined with 'dict' attribute. Vim++ class is just global variable contains all default to this class methods and members. So methods should be invoked as object.method1(arg1, arg2, argN) and constructors should be invoked as ClassName.New1(arg1, arg2, argN). If you invoke constructor in another function or in initializers list, you should use g: prefix.
+
+s: prefix is not supported in vim++. Don't use it in methods and constructors. Maybe in future versions it will be fixed.
+
+All classes are subclass of Object class. Object has a few methods:
+
+Method is(class)                        Is object of class a:class?
+Method HasParent(class)                 Has object a parent of type a:class?
+Method HasAncestor(class)               Has object an ancestor of type a:class?
+
+Any script using vim++ should be saved in file with extension .vim++ and placed somewhere in &runtimepath as usual Vim plugin. Though usual Vim plugin can use vim++ and libraries written on vim++ too, it should call function vimpp#Load() first.
+
+Head of vim++ script usually looks like this:
+
+Package 1.2
+Import vim++ 0.1
+Import Library1
+Import Library2 1.3
+Import Library2 ver > 0.5
+Import LibraryN ver > 0.6.1 && ver < 0.7.4
+
+Instead Package you may use Library. The difference is that a package is loaded always and a library is loaded only if it have been imported.
+
+Command Import imports some library. It may accept version of library as dot-separated list of numbers or some expression evaluated to integer. In the first case library loaded if and only if its version coincides with import argument. In the second case library is loaded only if expression evaluated to true(i.e. non-zero). Expression in Import argument may use 'ver' variable which contains actual version of library. Versions can be compared using usual comparison operators.
+
+Vim++ scripts should import 'vim++' library first. This will prevent script to be loaded by improper version of vim++. Current vim++ version is 0.1.0. The last zero can be omited(but it is not allowed to omit zero in expression ver == 0.1.0).
+
+Vim++ contains one built-in library, Reflection. It defines classes Type, FuncType and Method. Constructor g:Type.New(var)
+constructs Type object for any variable var. Class Type has methods:
+
+Method IsVimPPObject()                  True, if var is vim++ object, false otherwise.
+Method GetMembers()                     Returns list which contains members names
+Method GetMethods(...)                  Returns a dictionary having method names as keys and objects of type Method as values.
+Method GetConstructors(...)             Returns a dictionary having constructor names as keys and objects of type Method as values.
+
+Class Method represents methods of some class. It is derived from FuncType class which is Type subclass to represent type of function reference.
+
+FuncType has methods: 
+
+Method GetArgList()                     Returns list of names of function arguments.
+Method Definition()                     Returns definition of the function as list of lines.
+
+Vim++ contains syntax and indentation file for .vim++ files.
+

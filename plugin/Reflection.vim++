@@ -1,0 +1,120 @@
+" vim++: Object-oriented programming for Vim
+" Author: Michael Shvarts
+" Copyright: (c) 2007 by Michael Shvarts(shvarts@akmosoft.com)
+"               Permission is hereby granted to use and distribute this code,
+"               with or without modifications, provided that this copyright
+"               notice is copied with it. Like anything else that's free,
+"               vim++.vim(i.e. plugin/vim++.vim, syntax/vim++.vim, ftdetect/vim++.vim 
+"               and indent/vim++),  vimReflection.vim++ and vimpp.vim are provided
+"               *as is* and comes with no warranty of any kind, either
+"               expressed or implied. By using this plugin, you agree that
+"               in no event will the copyright holder be liable for any damages
+"               resulting from the use of this software.
+Library 1.0
+Import vim++ 0.1
+"{{{-----------------Class Type---------------
+Class Type
+    Constr New(obj)
+        if Type(a:obj) >= Type(g:Object)
+            return s:ClassType.New(a:obj)
+        endif
+        return s:TypeList[Type(a:obj)].New(a:obj)
+    endf
+    Method IsVimPPObject()
+        return Type(self.type) >= Type(g:Object)
+    endf
+    Method GetMembers()
+        return {}
+    endf
+    Method GetMethods(...)
+        return {}
+    endf
+    Method GetConstructors(...)
+        return {}
+    endf
+    Method InitTypeList()
+        let s:TypeList = [s:IntegerType, s:StringType, g:FuncType, s:ListType, s:DictType]
+    endf
+EndClass
+"}}}
+"{{{-----------------Class s:DictType---------------
+Class s:DictType : Type
+    Constr New(obj): {'type': a:obj}
+        return self
+    endf
+
+    Method GetMembers()
+        return keys(filter(copy(self.type), 'type(v:val) != 2 || string(v:val) !~ "function(''\\d\\+'')"'))
+    endf
+    Method GetMethods(...) 
+        let re = join(a:000, '\|')
+        return map(filter(copy(self.type), 'type(v:val) == 2 && string(v:val) =~ "function(''\\d\\+'')" && (!a:0 || v:key =~ re )'), 'g:Method.New(self.type,v:key)')
+    endf
+EndClass
+"}}}
+"{{{-----------------Class s:ClassType---------------
+Class s:ClassType : s:DictType
+    Constr New(obj) 
+        if Type(a:obj) >= Type(g:Object)
+            let self.type = a:obj['$class']
+            return self
+        endif
+        throw 'vim++:Reflection:Cannot get Class of non-vim++ object'
+    endf
+    Method GetMembers()
+        return filter(call(s:DictType.GetMembers, [], self), 'v:val[0] != "$"')
+    endf
+    Method GetConstructors(...)
+        return filter(call(self.GetMethods, a:000, self), 'v:val.Definition()[1] =~ ''if\s\+!has_key(self,\s\+''''\$constr'''')''')
+    endf
+EndClass
+"}}}
+"{{{-----------------Class s:IntegerType---------------
+Class s:IntegerType : Type
+    Constr New(obj): {'type': a:obj}
+        return self
+    endf
+EndClass
+"}}}
+"{{{-----------------Class s:StringType---------------
+Class s:StringType : Type
+    Constr New(obj): {'type': a:obj}
+        return self
+    endf
+EndClass
+"}}}
+"{{{-----------------Class s:ListType---------------
+Class s:ListType : Type
+    Constr New(obj): {'type': a:obj}
+        return self
+    endf
+EndClass
+"}}}
+"{{{-----------------Class FuncType---------------
+Class FuncType : Type
+    Constr New(obj) : {'type': a:obj}
+        if type(a:obj) != 2 
+            throw "vim++:Reflection:Cannot construct FuncType object for non-function"
+        endif
+        return self
+    endf
+    Method Definition()
+        redir => output
+        silent function self.type
+        redir END
+        return split(substitute(substitute(output, '\n\@<=\s*\d\+', '', 'g'), '^\s*\n', '', ''), '\%x0')
+    endf
+    Method GetArgList()
+        return split(matchlist(self.Definition(), '^\s*function\s\+[[:alnum:]#]\+\s*(\s*\([^)[:space:]]\%([^)]*[^)[:space:]]\)\)\?\s*)')[1],'\s*,\s*')
+    endf
+EndClass
+"}}}
+"{{{-----------------Class Method---------------
+Class Method : FuncType
+    Constr New(obj, funcName) : g:FuncType.New(a:obj[a:funcName]), {'name': a:funcName, 'class': a:obj}
+        return self
+    endf
+EndClass
+"}}}
+call Type.InitTypeList()
+" vim:foldmethod=marker
